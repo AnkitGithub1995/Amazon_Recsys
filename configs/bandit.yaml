@@ -1,0 +1,33 @@
+# ======================================================================
+# Contextual bandit on top of the DeepFM top-K (Stage 3).
+# Prereqs:  python -m scripts.gen_candidates  ->  python -m scripts.train_deepfm
+# Run:      python -m scripts.run_bandit
+# ======================================================================
+
+deepfm_config: /home/jupyter/ankit/ctr_recsys/configs/deepfm.yaml
+deepfm_checkpoint: /home/jupyter/ankit/ctr_recsys/output/hm_deepfm/best.pt
+
+sim:
+  n_arms: 50            # K: DeepFM top-K items offered to the bandit per user
+  slate: 5              # S: items actually shown per round
+  n_rounds: 10000       # users replayed (one round each)
+  require_positive: true  # skip users with no purchase among the K arms (zero-signal rounds)
+  seed: 42
+  log_every: 1000
+
+linucb:
+  alpha: 0.5
+  lam: 1.0
+
+neural:
+  hidden: 64
+  explore: 1.0          # gamma (UCB) / nu (TS)
+  lam: 1.0
+  lr: 0.001
+  train_every: 50       # rounds between SGD bursts
+  train_steps: 20
+  batch: 512
+  buffer_size: 50000
+
+output:
+  dir: /home/jupyter/ankit/ctr_recsys/output/hm_bandit

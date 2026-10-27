@@ -1,0 +1,48 @@
+# ======================================================================
+# DeepFM reranker (Stage 2) on top of R1 (MF) candidates.
+# Prereq: run  python -m scripts.gen_candidates   (dumps R1 priors+candidates)
+# Then run:     python -m scripts.train_deepfm
+# ======================================================================
+
+dataset:
+  name: hm
+  root: /home/jupyter/ankit/ctr_recsys/hm_data
+  image_emb: /home/jupyter/ankit/ctr_recsys/features/article_image_emb.pt
+  val_days: 7
+  smoke_nrows: 300000
+
+retriever:
+  candidates: /home/jupyter/ankit/ctr_recsys/output/candidates/r1_candidates.pt
+
+model:
+  name: deepfm
+  fm_dim: 16            # SHARED embedding width across all fields (FM needs uniform dim)
+  mlp_dims: [128, 64]
+  dropout: 0.1
+  n_age_buckets: 10
+  use_image: false      # K3 ablation: project SigLIP image vec into the deep tower
+  img_proj: 32
+
+rerank:
+  k1: 200               # candidate depth from R1 to re-score (<= kmax in the dump)
+
+training:
+  epochs: 5
+  batch_size: 4096
+  lr: 0.001
+  weight_decay: 0.00001
+  num_negs: 4           # negatives per positive
+  neg_sampling: popularity   # popularity | uniform
+  seed: 42
+  smoke: false
+  max_pairs: 0          # 0 = use all train positives; else cap for a quick run
+
+eval:
+  k: 20
+  user_batch: 256
+
+output:
+  dir: /home/jupyter/ankit/ctr_recsys/output/hm_deepfm
+
+logging:
+  log_every: 200

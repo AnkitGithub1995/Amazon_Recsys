@@ -1,0 +1,81 @@
+# ======================================================================
+# Training configuration for the feature-based multimodal LightGCN.
+# This is the SINGLE source of truth for all tunables and paths.
+# Nothing here is overridable via command-line args by design.
+#
+# To switch datasets: change the `dataset` block (and provide a loader
+# whose output matches the HMData interface). `dataset.name` selects it.
+# ======================================================================
+
+dataset:
+  name: hm                                   # which dataset builder to use
+  root: /home/jupyter/ankit/ctr_recsys/hm_data                              # folder with the raw files
+  image_emb: /home/jupyter/ankit/ctr_recsys/features/article_image_emb.pt   # precomputed image-vector cache
+  val_days: 7                                # last N days held out for eval
+  smoke_nrows: 300000                        # transactions read when smoke: true
+
+model:
+  name: feature_lightgcn # feature_lightgcn (R3/R4) | id_lightgcn (R2; num_layers=0 -> MF/R1) | popularity (R0)
+  embedding_dim: 64
+  num_layers: 3          # LightGCN diffusion hops (0 = pure feature two-tower / MF)
+  field_dim: 32          # per-feature-field embedding width
+  hidden: 256            # encoder MLP hidden width
+  dropout: 0.1
+  use_id_embedding: true # hybrid: add learnable per-node id vectors to feature E^0
+  id_init_std: 0.1       # init std of the id embedding tables
+
+training:
+  epochs: 20
+  batch_size: 4096
+  lr: 0.001
+  weight_decay: 0.0001   # L2 on encoder + id params
+  num_negs: 16           # popularity-sampled negatives per positive (recall knob)
+  tau: 0.15              # InfoNCE temperature
+  lam_nce: 1.0           # weight: in-batch InfoNCE (ranking)
+  lam_bce: 1.0           # weight: calibrated BCE (only used if train_calibration)
+  train_calibration: false  # calibration is now POST-HOC -> scripts/calibrate.py
+  prior_correction: false  # Elkan logQ correction on BCE negatives
+  seed: 42
+  smoke: false           # true -> small subset + 20 batches, for plumbing checks
+  lr_schedule:
+    type: cosine         # none | cosine | step
+    warmup_epochs: 0     # linear warmup epochs (0 = disabled)
+    step_size: 5         # (step) epochs between decays
+    gamma: 0.1           # (step) decay factor
+    min_lr: 0.00001      # (cosine) floor
+
+eval:
+  k: 20
+  eval_every: 1          # run eval every N epochs
+  max_pos: 50000         # calibration eval positive cap
+  early_stopping:
+    enable: true
+    monitor: recall      # recall | ndcg (higher is better)
+    patience: 5          # stop after N evals with no improvement
+    min_delta: 0.0       # min gain over best to count as improvement
+
+# Post-hoc Platt calibration (run scripts/calibrate.py AFTER training).
+calibration:
+  checkpoint: best.pt    # checkpoint under output.dir to calibrate
+  n_neg: 100             # sampled negatives per positive for the fit
+  max_pos: 100000        # cap on validation positives used
+  prior_correction: false # match the sampled eval prior -> cal_ratio ~1.
+                           # set true only to shift to a real-impression base rate
+  lbfgs_iters: 100       # LBFGS iterations for the (a, b) fit
+  out: calibration.pt    # saves {cal_scale, cal_bias} under output.dir
+
+# One-time offline image encoding (SigLIP2 -> SigLIP fallback).
+image_encoder:
+  model: null            # null = auto-pick (siglip2 then siglip v1)
+  batch_size: 64
+  image_size: 224
+  limit: 0               # 0 = all articles
+  out: /home/jupyter/ankit/ctr_recsys/features/article_image_emb.pt
+
+output:
+  dir: /home/jupyter/ankit/ctr_recsys/output/hm_lightgcn
+
+logging:
+  log_every: 50          # print/log train scalars every N batches (0 = off)
+  tensorboard: true      # write TensorBoard event files
+  tb_dir: null           # null -> <output.dir>/tb

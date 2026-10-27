@@ -1,0 +1,76 @@
+# ======================================================================
+# R1 baseline: Matrix Factorization (pure ID embeddings, NO graph).
+# id_lightgcn with num_layers=0 == MF. Free per-user + per-item vectors,
+# trained with in-batch InfoNCE + popularity negatives.
+# Run with the bare command:  python -m training.train_hm
+# ======================================================================
+
+dataset:
+  name: hm
+  root: /home/jupyter/ankit/ctr_recsys/hm_data
+  image_emb: /home/jupyter/ankit/ctr_recsys/features/article_image_emb.pt
+  val_days: 7
+  smoke_nrows: 300000
+
+model:
+  name: id_lightgcn      # pure-ID model
+  embedding_dim: 64
+  num_layers: 0          # 0 hops == Matrix Factorization
+  field_dim: 32
+  hidden: 256
+  dropout: 0.1
+  use_id_embedding: false
+  id_init_std: 0.1
+
+training:
+  epochs: 20
+  batch_size: 4096
+  lr: 0.001
+  weight_decay: 0.0001
+  num_negs: 16
+  tau: 0.15
+  lam_nce: 1.0
+  lam_bce: 1.0
+  train_calibration: false
+  prior_correction: false
+  seed: 42
+  smoke: false
+  lr_schedule:
+    type: cosine
+    warmup_epochs: 0
+    step_size: 5
+    gamma: 0.1
+    min_lr: 0.00001
+
+eval:
+  k: 20
+  eval_every: 1
+  max_pos: 50000
+  early_stopping:
+    enable: true
+    monitor: recall
+    patience: 5
+    min_delta: 0.0
+
+calibration:
+  checkpoint: best.pt
+  n_neg: 100
+  max_pos: 100000
+  prior_correction: false
+  lbfgs_iters: 100
+  out: calibration.pt
+
+image_encoder:
+  model: null
+  batch_size: 64
+  image_size: 224
+  limit: 0
+  out: /home/jupyter/ankit/ctr_recsys/features/article_image_emb.pt
+
+output:
+  dir: /home/jupyter/ankit/ctr_recsys/output/hm_R1_mf
+
+logging:
+  log_every: 50
+  tensorboard: false
+  tb_dir: null

@@ -1,0 +1,140 @@
+1. On this note, can you give me the architecture of search query relevance ML systems, how google/amazon maintains large table of search query to product type mappings? what are the SOTA techniques they apply for search query based product retrieval?
+Give recent standard SOTA industry practises.
+
+in Dense Retrieval (Two-Tower Semantic): The query is embedded into a dense vector space. We use an Approximate Nearest Neighbor (ANN) engine (like Google's ScaNN or FAISS) to pull the top vectors. what are the two towers usually? what features they are built with?
+
+how to distill : distilled LLM (like a sub-1B parameter Gemma) rewrites this in real-time into a dense semantic intent:
+
+Stage 4: Heavy Ranking (The "L3" Cross-Encoder / MoE Layer)
+For the final 500 items, we deploy our heaviest compute. We use Cross-Encoders (where the query and item are processed through the transformer together, allowing rich cross-attention) or Mixture of Experts (MoE) models. This layer scores the exact probability of a purchase and generates the final Top 10 list the user sees.
+
+For cross encoder can you explain the training methodlogy, given same query context embedding and item embedding of bi-encoder, how does it trained differently and infer differently than late interaction of bi-encoder?
+
+Now let say in step 1, I have to understand given a search query, is the distilled LLM parsing features well or not, if well it will go through next steps of stages, else I need to use hyde to generate synthetic product description and search using that in the bipartite graph. So how to measure the accuracy of the search parsing features in optimum way?
+
+Dense Retrieval (Two-Tower Semantic): The query is embedded into a dense vector space. We use an Approximate Nearest Neighbor (ANN) engine (like Google's ScaNN or FAISS) to pull the top vectors. Why ANN is used instead of embedding cosine similarity and softmax?
+
+2. On similar note, can you give me the architecture of large scale trust and safety pipelines ML systems, how amazon maintains trust in voice queries of Alexa+ within tight latency budget? what are the SOTA techniques they apply for voice query based trust regression?
+Give recent standard SOTA industry practises.
+
+CAn you tell me the design of 2 stages:
+
+We train a Sparse Mixture of Experts (MoE). The very first routing layer of the network acts as a trivial classifier. If it is 99.9% confident the query is benign, it forces the token representation down a highly optimized "Fast Path" expert that skips heavy safety checks. -- What is the training data preparation step here(with hard negative mining), model cosntruct and loss function.
+Early acoustic fusion: We use models that ingest raw audio spectrograms natively alongside text (the architecture popularized by Gemini 1.5 Pro/Audio and GPT-4o)--- training data preparation step here(with hard negative mining), model cosntruct and loss function.
+in depth?
+
+for Stage 1 input is only audio embedding or text is also needed there?
+
+
+then how to handle this scenario here which you mentioned earlier?The Old Problem: ASR transcription errors caused massive T&S regressions. If the user said "buy a block of cheese", and ASR heard "buy a glock please", the text-T&S model would flag it as a weapons violation.
+
+Now the tokens are inside the Stage 2 Heavy Acoustic Fusion model. This model has massive parameter capacity and access to the deep, uncompressed audio spectrograms.
+here one clarification, the same audio spectogram should be inpout to stage 1 as well or it will be just the audio tokens from client side?
+
+Please code this loss function:A. Audio-Text Contrastive Loss (ATC):
+Before the model can judge safety, it must understand how audio maps to text. We use a contrastive loss (InfoNCE) on the representations before they fuse.
+We pull the Audio Embedding and the Text Embedding for the same query closer together, while pushing embeddings from different queries apart. This forces the Audio Tower to learn semantic meaning from the acoustics.
+
+
+
+can you tell me where and when is the fusion happening between audio embedding and text embedding?
+
+can you write this model code once how youre thinking to organise stage 1(pre-fusion) and stage 2(gemma 3 4b)
+
+okay can we discuss about vad now?
+
+
+Now can you give me the architecture of large scale ADS retrieval ML systems, how google uses multistage pipeline for maintaining ads retrieval latency of 10-30ms? what are the SOTA techniques they apply for search query?
+Give recent standard SOTA industry practises.
+
+
+
+
+
+
+#########
+
+Can you read the paper?
+https://arxiv.org/pdf/2606.16140
+
+here I want to deepdive into comment:
+a model doing AIME-level math and passing live LeetCode contests can run easily on a single consumer GPU or even locally on a high-end laptop
+
+Can you explain me how reasoning models are trained for AIME-level math tests and leetcode solutions, what intuition is used, which attentions are efficient on that? sparse or dense which architecture is trained for this task? and what is the typical architecture setup?
+
+
+Can you read this blog once?
+https://www.kaggle.com/competitions/youtube8m-2019/writeups/rlin-3rd-place-solution-sharing-a-deep-mixture-mod
+
+in online distillation 12 model predicts logits for each row, but then what happens at global consensus? Can you explain this a bit?
+
+
+
+Can you give some approaches which is used in recent classification problem to add a new unknown class in a multi-label classification and multi-class classification setup, that is in binary cross entropy based setup and cross entropy based setup both
+
+Also can you explain me how video embedding models work? how does they preprocess video into frames in optimised way and deduplicates? I need deep context on hadling video level data..
+
+
+
+Can you explain stepwise how a MoE model like Gemma 26B 4b gets trained so that given a token it understand which sparse router expert to activate and how the no of experts are decided inside FFN layer? I want to understand the detailed view of Dense vs sparse MLP layers learning mechanism so that I can implement one from scratch.
+
+Can you explain me how decoder works at training time vs at inference time with detailed steps from tokenization to finally <end_token> generation?
+
+Can you also explain an encoder only transformer architecture with diagram? I want to deep dive what happens in recent encoder FFN layers and what last step of encoder layer is? how each token embedding gets generated at end?
+
+so incase of gemma or qwen which are specifically decoder based model can you tell me entire training step of these models, when masked attention is used vs normal multihead attention is used. I want stepwise learning algorithm of these decoder models
+
+
+
+For clarification, in decoder training phase it firstly calculates causal mask attention from trillion of tokens, then goes into FFN layer does backprop and learn next token prediction. In SFT it learns reasoning through QNA pairs. SO then according to attention is all you need paper, there was a step in decoder layer where cross attention happens between K-V of encoder layer with Q of decoder layer? where does that happen in entire cycle?
+
+Can you make me interview ready for all different equations of FFN activation function, from Relu to leaky RElu to Gelu to GeGLU SwigLu entirely?
+
+For recent architecture of decoder(Gemma 4), can you once in detailed explain stepwise the operations happening till next token prediction at training and inference time both separately? How causal self attention is used in both stages, how loss mask is used in training step, and how for each token prefill and decode happens for the below given sentence:
+
+Let's look at how the prompt "What is 2+2?" and the answer "It is 4" are processed:
+
+
+
+One clarfication, in modern GPT architecture does it also pass the residual connection in each layers between attention and feed forward layeers?
+
+
+
+Now can you tell me in details about the MoE model training setup? In inference how does it choose which K experts to activate?
+
+Can you read this paper once?
+https://arxiv.org/html/2608.03893v1
+
+regarding the MoE learning you mentioned earlier, I have a question regarding the learnable adapter layer in gemma. What does this modules mean?
+target_modules: [q_proj, k_proj, v_proj, o_proj, out_proj, gate_proj, up_proj, down_proj]
+
+
+
+in terms of expert learning, are experts the entire transformer block or the FFN layers only? How these experts are choosen? The intuition between dense and sparse layers
+
+
+Can you discuss in depth about value function, bellmans equation, bellmans optimum equation, value and policy iteration
+
+
+Can you also discuss about pruning, its usecase and how it happens?
+
+
+Can you distinguish between DP, DDP, FSDP1, FSDP2 for interview?
+
+
+
+Does mla KV compresion also happen at head level? How it handles Rope at inference time
+
+
+
+############
+
+
+As a tutor, can you explain me the following concepts to get hold of RL. Start from Mdp, Bellmans equation to Vanilla Policy Gradient, Importance sampling, Advantage estimation, Contrained policy updates, then PPO and GRPO. Be mathematical when youre teaching the chronologies
+
+Can you add the terms as in taxonomies as well on above explanations along with the mathematical equations you mentioned?
+
+Can you tell me the intuitions between vpg, 4. Variance Reduction & Advantage Estimation, Importance Sampling, PPO and GRPO?
+
+
+
